@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      body {
+        background: url('images/loading.gif') no-repeat center center;
+        margin: 0;
+      }
+      iframe {
+        background: #fff;
+        height: 286px;
+        visibility: hidden;
+        width: 500px;
+      }
+
+      iframe.is-loaded {
+        visibility: visible;
+      }
+    </style>
+
+    <script src="js/background/config.js"></script>
+    <script src="js/iframe.js"></script>
+  </head>
+  <body>
+    <iframe frameborder="0"></iframe>
+  </body>
+</html>

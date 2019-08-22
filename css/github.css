@@ -1,0 +1,15 @@
+.harvest-timer.running {
+  background-color: #1385e5;
+  background: -webkit-linear-gradient(top, #53b2fc, #1385e5);
+  background: -moz-linear-gradient(top, #53b2fc, #1385e5);
+  background: -o-linear-gradient(top, #53b2fc, #1385e5);
+  background: linear-gradient(to bottom, #53b2fc, #1385e5);
+  border-color: #075fa9;
+  color: #fff; }
+  .harvest-timer.running:hover {
+    background-color: #106fbf;
+    background: -webkit-linear-gradient(top, #2ba0fb, #106fbf);
+    background: -moz-linear-gradient(top, #2ba0fb, #106fbf);
+    background: -o-linear-gradient(top, #2ba0fb, #106fbf);
+    background: linear-gradient(to bottom, #2ba0fb, #106fbf);
+    border-color: #054982; }
