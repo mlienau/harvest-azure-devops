@@ -1,0 +1,19 @@
+.harvest-timer.running {
+  background: #298fca;
+  border-color: #298fca #298fca #026aa7;
+  color: #fff; }
+  .harvest-timer.running:active {
+    background: #0079bf;
+    border-color: #0079bf #0079bf #055a8c; }
+
+.trello-timer-icon {
+  background-image: url("chrome-extension://__MSG_@@extension_id__/images/trello-timer-icon.png");
+  background-position: 4px -83px;
+  background-repeat: no-repeat;
+  display: inline-block;
+  height: 18px;
+  margin: -1px 0 -3px 0;
+  position: relative;
+  width: 18px; }
+  .harvest-timer:hover > .trello-timer-icon, .harvest-timer.running > .trello-timer-icon {
+    background-position: 4px -122px; }
