@@ -35,8 +35,15 @@
       "webRequestBlocking"
    ],
    "update_url": "https://clients2.google.com/service/update2/crx",
-   "version": "1",
+   "version": "1.1",
    "web_accessible_resources": [
       "images/trello-timer-icon.png"
-   ]
+   ],
+   "browser_action": {
+      "default_icon": {
+        "19": "images/h-toolbar-off@19px.png",
+        "38": "images/h-toolbar-off@38px.png"
+      },
+      "default_title": "Harvest - Azure DevOps"
+    }
 }

@@ -125,17 +125,17 @@
     };
 
     PlatformExtension.prototype.setRunningTimerIcon = function(running) {
-      var state;
-      state = running ? "on" : "off";
-      chrome.browserAction.setIcon({
-        path: {
-          "19": "images/h-toolbar-" + state + "@19px.png",
-          "38": "images/h-toolbar-" + state + "@38px.png"
-        }
-      });
-      return chrome.browserAction.setTitle({
-        title: running ? "View the running Harvest timer" : "Start a Harvest timer"
-      });
+      // var state;
+      // state = running ? "on" : "off";
+      // chrome.browserAction.setIcon({
+      //   path: {
+      //     "19": "images/h-toolbar-" + state + "@19px.png",
+      //     "38": "images/h-toolbar-" + state + "@38px.png"
+      //   }
+      // });
+      // return chrome.browserAction.setTitle({
+      //   title: running ? "View the running Harvest timer" : "Start a Harvest timer"
+      // });
     };
 
     PlatformExtension.prototype.installed = function(arg) {
