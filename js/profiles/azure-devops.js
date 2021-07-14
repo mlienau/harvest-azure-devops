@@ -50,6 +50,7 @@
             });
         };
 
+        const portalHost = document.querySelector(".bolt-portal-host");
         AzureDevOpsProfile.prototype.handleMutations = function (mutations) {
             var i, len, results;
             results = [];
@@ -73,22 +74,64 @@
                     // return results;
                 }
 
-                // Board Tiles
+                // if (addedNodes.className?.includes("bolt-menu-portal")) {
+                //     console.log("addednodes", addedNodes);
+                // }
+                if (addedNodes?.innerHTML?.includes("Copy full SHA")) {
+                    console.log("copy full sha!", addedNodes?.innerHTML);
+                }
+
+                if (addedNodes?.className?.includes("bolt-table-row")) {
+                    console.log("bolt-table-row", addedNodes);
+                }
+
+                // if (addedNodes?.classList?.contains("repos-commits-table")) {
+                //     console.group("Commits TOP Level")
+                //     console.log("table", addedNodes);
+                //     const commitNodes = Array.from(addedNodes.querySelectorAll("tbody a.bolt-table-row"));
+                //     console.log("commits", commitNodes);
+                //     // this.addTimerButtonToCommitRow(commitNodes);
+                //     console.groupEnd();
+                // }
+
                 for (let j = 0; j < mutations[i].addedNodes.length; j++) {
                     const element = mutations[i].addedNodes[j];
                     
+                    // Board Tiles
                     if (element.className?.includes("board-tile")) {
                         if (element.querySelector("." + harvestTileContainerClassName)) {
                             console.log(".board-tile harvest container already exists");
                             continue;
                         }
 
-                        results.push((function () {
+                        results.push((() => {
                             var results1 = [];
                             results1.push(this.addTimerToTile(element));
                             return results1;
                         }).call(this));
                     }
+
+                    // Commit List Items
+                    if (element.tagName === "a"
+                        && element.classList?.contains("bolt-table-row")
+                        && (element.href ?? "").includes("/commit/")
+                    ) {
+                        results.push((() => {
+                            var results1 = [];
+                            results1.push(this.addTimerButtonToCommitRow(element));
+                            return results1;
+                        }).call(this));
+                    }
+
+                    // if (element.classList?.contains("repos-commits-table")) {
+                    //     console.log("2. repos-commits-table", element);
+                    //     console.log("2. table items", element.querySelectorAll("tbody a.bolt-table-row"));
+                    // }
+
+                    // if (element.tagName === "a" && element.className?.includes("bolt-table-row")) {
+                    //     console.log("3. commit", element);
+                    //     console.log("3. commit href", location.href);;
+                    // }
                 }
             }
 
@@ -152,6 +195,10 @@
                 }, 500);
             });
 
+            const commits = document.querySelectorAll(".repos-commits-table tbody a.bolt-table-row");
+            console.log("commits", commits);
+            Array.from(commits).forEach(node => this.addTimerButtonToCommitRow(node));
+
             return document.addEventListener('pjax:end', this.addTimerIfOnIssue);
         };
 
@@ -166,8 +213,6 @@
                 return;
             }
 
-            // var account = ;
-            var group = decodeURIComponent(location.pathname.split('/')[1]);
             var caption = workItemNode.querySelector("a.caption");
             if (!caption) {
                 return;
@@ -176,17 +221,8 @@
             var parts = caption.href.split("/");
             var itemId = parts[parts.length - 1];
             return this.addTimer({
-                item: {
-                    id: itemId,
-                    name: "#" + itemId + ": " + (this.issueTitle(workItemNode))
-                },
-                group: {
-                    id: group,
-                    name: group
-                },
-                // account: {
-                //     id: account
-                // }
+                id: itemId,
+                name: `#${itemId}: ${workItemNode.querySelector("input[type='text']")?.value}`
             });
         };
 
@@ -243,6 +279,9 @@
             timerButton.style.width = "auto";
             timerButton.className = "harvest-timer";
             timerButton.innerHTML = '<span class="fabric-icon ms-Icon--Clock"></span>';
+            // timerButton.dataset.
+            
+            timerButton.setAttribute("data-skip-styling", "true");
 
             const workItemId = content.querySelector(".id")?.innerText;
             const clickableTitle = content.querySelector(".clickable-title-link");
@@ -264,20 +303,13 @@
             content.appendChild(harvestTileContainer);
         };
 
-        AzureDevOpsProfile.prototype.issueTitle = function (workItemNode) {
-            var input = workItemNode.querySelector("input[type='text']");
-            if (input == null) {
-                return void 0;
-            }
-
-            return input.value;
-        };
-
+        /**
+         * @param {{id: string, name: string;}} data 
+         * @returns 
+         */
         AzureDevOpsProfile.prototype.addTimer = function (data) {
-            var el, i, len, name, permalink, ref;
-            for (name in data) {
-                this.headerButton.dataset[name] = JSON.stringify(data[name]);
-            }
+            var el, i, len, permalink, ref;
+            addMetaData(this.headerButton, data);
             account = data.account, group = data.group, item = data.item;
             var caption = document.querySelector("a.caption");
             var permalink = caption.href;
@@ -295,6 +327,17 @@
             }
             return this.notifyPlatformOfNewTimers();
         };
+
+        /**
+         * 
+         * @param {HTMLElement} element 
+         * @param {{id: string, name: string}} item 
+         */
+        function addMetaData(element, item) {
+            element.dataset["item"] = JSON.stringify(item);
+            var group = decodeURIComponent(location.pathname.split('/')[1]);
+            element.dataset["group"] = JSON.stringify({ id: group, name: group });
+        }
 
         AzureDevOpsProfile.prototype.createButton = function () {
             var button = document.createElement("button");
@@ -322,6 +365,46 @@
             var evt, ref;
             evt = new CustomEvent("harvest-event:timers:chrome:add");
             return (ref = document.querySelector("#harvest-messaging")) != null ? ref.dispatchEvent(evt) : void 0;
+        };
+
+        AzureDevOpsProfile.prototype.addTimerButtonToCommitRow = function (row) {
+            const sideActionCell = row.querySelector(".bolt-table-cell-side-action");
+            const spacerCell = row.querySelector(".bolt-table-spacer-cell");
+            spacerCell.style.overflow = "visible";
+
+            const commitButton = document.createElement("button");
+            commitButton.type = "button";
+            commitButton.innerHTML = `<span class="fabric-icon ms-Icon--Clock"></span>`;
+            commitButton.classList.add("harvest-timer", "commit-timer");
+            commitButton.setAttribute("data-skip-styling", "true");
+            commitButton.style.backgroundColor = "#f36c00";
+            commitButton.style.color = "#ffffff";
+            commitButton.style.padding = ".25rem";
+            commitButton.style.border = "none";
+            commitButton.style.cursor = "pointer";
+            commitButton.style.marginLeft = "3px";
+            commitButton.style.borderRadius = "2px";
+
+            const commitText = row.querySelector(".commit-title").innerText ?? "";
+            const itemData = { name: commitText };
+            if (typeof commitText === "string") {
+                const workItemMatch =  commitText.match(/#\d+/);
+                if (workItemMatch?.length > 0) {
+                    const workItemId = workItemMatch[0].substring(1);
+                    itemData["id"] = workItemId
+                    const [, org, project] = location.pathname.split("/");
+                    const permalink = `${location.origin}/${org}/${project}/_workitems/edit/${workItemId}`;
+                    commitButton.setAttribute('data-permalink', permalink);
+                }
+            }
+
+            addMetaData(commitButton, itemData);
+
+            commitButton.addEventListener("click", function(e) {
+                e.preventDefault();
+            });
+
+            spacerCell?.appendChild(commitButton);
         };
 
         return AzureDevOpsProfile;
