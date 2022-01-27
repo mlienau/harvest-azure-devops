@@ -7,7 +7,7 @@
   PlatformExtension = (function() {
     PlatformExtension.prototype.host = window.host;
 
-    PlatformExtension.prototype.version = chrome.app.getDetails().version;
+    PlatformExtension.prototype.version = (chrome ?? browser).runtime.getManifest().version;
 
     PlatformExtension.prototype.pollLength = 20;
 
@@ -23,9 +23,9 @@
       window.addEventListener("offline", this.stopPolling);
       document.addEventListener("login:change", this.getTimerStatus);
       new PlatformCookie();
-      chrome.runtime.onMessage.addListener(this.handleMessage);
-      chrome.runtime.onInstalled.addListener(this.installed);
-      chrome.webRequest.onHeadersReceived.addListener(this.handleHeaders, {
+      (chrome ?? browser).runtime.onMessage.addListener(this.handleMessage);
+      (chrome ?? browser).runtime.onInstalled.addListener(this.installed);
+      (chrome ?? browser).webRequest.onHeadersReceived.addListener(this.handleHeaders, {
         urls: ['https://github.com/*'],
         types: ['main_frame']
       }, ['blocking', 'responseHeaders']);
@@ -143,7 +143,7 @@
       reason = arg.reason, previousVersion = arg.previousVersion;
       switch (reason) {
         case 'install':
-          return chrome.tabs.create({
+          return (chrome ?? browser).tabs.create({
             url: this.splashUrl + "?version=" + this.version
           });
         case 'update':

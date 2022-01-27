@@ -11,7 +11,7 @@
     function PlatformCookie() {
       this.parseCookie = bind(this.parseCookie, this);
       this.parseCookieChange = bind(this.parseCookieChange, this);
-      chrome.cookies.onChanged.addListener(this.parseCookieChange);
+      (chrome ?? browser).cookies.onChanged.addListener(this.parseCookieChange);
       this.getCookie();
     }
 
@@ -40,7 +40,7 @@
         url: this.host,
         name: this.cookie_name
       };
-      return chrome.cookies.get(options, this.parseCookie);
+      return (chrome ?? browser).cookies.get(options, this.parseCookie);
     };
 
     PlatformCookie.prototype.parseCookie = function(cookie) {

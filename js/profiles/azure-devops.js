@@ -50,7 +50,9 @@
             });
         };
 
-        const portalHost = document.querySelector(".bolt-portal-host");
+        /**
+         * @param {MutationRecord[]} mutations 
+         */
         AzureDevOpsProfile.prototype.handleMutations = function (mutations) {
             var i, len, results;
             results = [];
@@ -60,12 +62,9 @@
                     continue;
                 }
 
-                // console.log("addedNodes", addedNodes);
-
                 // wait for work item form caption to be added
                 if (addedNodes.className === "info-text-wrapper"
                     && addedNodes.children?.[1]?.className === "caption") {
-                    console.log('%cFOUND CAPTION', 'background: #f36c00; color: #ffffff;');
                     results.push((function () {
                         var results1 = [];
                         results1.push(this.addTimerIfOnIssue());
@@ -74,33 +73,12 @@
                     // return results;
                 }
 
-                // if (addedNodes.className?.includes("bolt-menu-portal")) {
-                //     console.log("addednodes", addedNodes);
-                // }
-                if (addedNodes?.innerHTML?.includes("Copy full SHA")) {
-                    console.log("copy full sha!", addedNodes?.innerHTML);
-                }
-
-                if (addedNodes?.className?.includes("bolt-table-row")) {
-                    console.log("bolt-table-row", addedNodes);
-                }
-
-                // if (addedNodes?.classList?.contains("repos-commits-table")) {
-                //     console.group("Commits TOP Level")
-                //     console.log("table", addedNodes);
-                //     const commitNodes = Array.from(addedNodes.querySelectorAll("tbody a.bolt-table-row"));
-                //     console.log("commits", commitNodes);
-                //     // this.addTimerButtonToCommitRow(commitNodes);
-                //     console.groupEnd();
-                // }
-
                 for (let j = 0; j < mutations[i].addedNodes.length; j++) {
                     const element = mutations[i].addedNodes[j];
                     
                     // Board Tiles
-                    if (element.className?.includes("board-tile")) {
+                    if (element.className?.includes("board-tile") && element.id) {
                         if (element.querySelector("." + harvestTileContainerClassName)) {
-                            console.log(".board-tile harvest container already exists");
                             continue;
                         }
 
@@ -122,20 +100,9 @@
                             return results1;
                         }).call(this));
                     }
-
-                    // if (element.classList?.contains("repos-commits-table")) {
-                    //     console.log("2. repos-commits-table", element);
-                    //     console.log("2. table items", element.querySelectorAll("tbody a.bolt-table-row"));
-                    // }
-
-                    // if (element.tagName === "a" && element.className?.includes("bolt-table-row")) {
-                    //     console.log("3. commit", element);
-                    //     console.log("3. commit href", location.href);;
-                    // }
                 }
             }
 
-            console.log("results.length", results.length);
             if (results.length > 0) {
                 this.notifyPlatformOfNewTimers();
             }
@@ -157,8 +124,6 @@
 
                 const isPlainText = e.target.hasAttribute("data-harvest-plain-text-copy");
                 const content = e.target.parentElement.parentElement;;
-                console.log("content", content);
-                console.log("isPlainText", isPlainText);
                 const workItemId = content.querySelector(".id")?.innerText;
                 const clickableTitle = content.querySelector(".clickable-title-link");
                 const workItemName = clickableTitle?.innerText;
@@ -196,7 +161,6 @@
             });
 
             const commits = document.querySelectorAll(".repos-commits-table tbody a.bolt-table-row");
-            console.log("commits", commits);
             Array.from(commits).forEach(node => this.addTimerButtonToCommitRow(node));
 
             return document.addEventListener('pjax:end', this.addTimerIfOnIssue);
@@ -226,16 +190,16 @@
             });
         };
 
+        /**
+         * @param {HTMLDivElement} boardTile 
+         */
         AzureDevOpsProfile.prototype.addTimerToTile = function (boardTile) {
-            // console.log(addedNodes);
             const content = boardTile?.querySelector(".board-tile-content");
             if (!content) {
-                console.log("DID NOT FIND BOARD TILE CONTENT");
                 return;
             }
 
             if (content.querySelector("." + harvestTileContainerClassName)) {
-                console.log("harvest container already exists");
                 return;
             }
 
@@ -279,29 +243,43 @@
             timerButton.style.width = "auto";
             timerButton.className = "harvest-timer";
             timerButton.innerHTML = '<span class="fabric-icon ms-Icon--Clock"></span>';
-            // timerButton.dataset.
+            timerButton.addEventListener("click", (e) => {
+                this.setHarvestButtonData(boardTile, timerButton);
+            });
             
             timerButton.setAttribute("data-skip-styling", "true");
 
-            const workItemId = content.querySelector(".id")?.innerText;
-            const clickableTitle = content.querySelector(".clickable-title-link");
-            const workItemName = clickableTitle?.innerText;
-            timerButton.setAttribute("data-item", JSON.stringify({
-                id: workItemId,
-                name: `#${workItemId}: ${workItemName}`
-            }));
-            timerButton.setAttribute("data-permalink", content.querySelector(".clickable-title-link")?.href);
-            
-            var group = decodeURIComponent(location.pathname.split('/')[1]);
-            timerButton.setAttribute("data-group", JSON.stringify({
-                id: group,
-                name: group
-            }));
+            this.setHarvestButtonData(content, timerButton);
 
             harvestTileContainer.appendChild(timerButton);
 
             content.appendChild(harvestTileContainer);
         };
+
+        /**
+         * @param {HTMLDivElement} boardTile
+         * @param {HTMLButtonElement} timerButton 
+         */
+        AzureDevOpsProfile.prototype.setHarvestButtonData = function (boardTile, timerButton) {
+            const workItemId = boardTile.querySelector(".id")?.innerText;
+            if (!workItemId) {
+                return;
+            }
+
+            const clickableTitle = boardTile.querySelector(".clickable-title-link");
+            const workItemName = clickableTitle?.innerText;
+            timerButton.setAttribute("data-item", JSON.stringify({
+                id: workItemId,
+                name: `#${workItemId}: ${workItemName}`
+            }));
+            timerButton.setAttribute("data-permalink", boardTile.querySelector(".clickable-title-link")?.href);
+
+            var group = decodeURIComponent(location.pathname.split('/')[1]);
+            timerButton.setAttribute("data-group", JSON.stringify({
+                id: group,
+                name: group
+            }));
+        }
 
         /**
          * @param {{id: string, name: string;}} data 
@@ -329,7 +307,6 @@
         };
 
         /**
-         * 
          * @param {HTMLElement} element 
          * @param {{id: string, name: string}} item 
          */
@@ -367,8 +344,10 @@
             return (ref = document.querySelector("#harvest-messaging")) != null ? ref.dispatchEvent(evt) : void 0;
         };
 
+        /**
+         * @param {HTMLAnchorElement} row 
+         */
         AzureDevOpsProfile.prototype.addTimerButtonToCommitRow = function (row) {
-            const sideActionCell = row.querySelector(".bolt-table-cell-side-action");
             const spacerCell = row.querySelector(".bolt-table-spacer-cell");
             spacerCell.style.overflow = "visible";
 
@@ -410,7 +389,7 @@
         return AzureDevOpsProfile;
     })();
 
-    chrome.runtime.sendMessage({ type: "getHost" }, function (host) {
+    (chrome ?? browser).runtime.sendMessage({ type: "getHost" }, function (host) {
         return new AzureDevOpsProfile(host);
     });
 }).call(this);

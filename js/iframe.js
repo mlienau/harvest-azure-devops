@@ -45,12 +45,12 @@
         "38": "images/h-toolbar-" + state + "@38px.png"
       }
     };
-    chrome.browserAction.setIcon(options, function() {
+    (chrome ?? browser).browserAction.setIcon(options, function() {
       if (shouldClose) {
         return window.close();
       }
     });
-    return chrome.browserAction.setTitle({
+    return (chrome ?? browser).browserAction.setTitle({
       title: isRunning ? "View the running Harvest timer" : "Start a Harvest timer"
     });
   };
