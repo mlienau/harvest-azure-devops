@@ -12,9 +12,11 @@
                     value = opts[name];
                     script[name] = value;
                 }
+
+                script.src = opts.src;
                 break;
             case "string":
-                script.innerHTML = opts;
+                script.textContent = opts;
         }
         ph = document.getElementsByTagName("script")[0];
         return ph.parentNode.insertBefore(script, ph);
@@ -24,13 +26,14 @@
         function AzureDevOpsProfile(host1) {
             this.host = host1;
             this.addTimerIfOnIssue = bind(this.addTimerIfOnIssue, this);
+            this.addTimersToWorkItemTiles = bind(this.addTimersToWorkItemTiles, this);
             this.handleMutations = bind(this.handleMutations, this);
-            this.listen();
             this.infect();
+            this.listen();
 
             var style = document.createElement("style");
             style.setAttribute("type", "text/css");
-            style.innerHTML = ".harvest-overlay { z-index: 999999 !important; }";
+            style.innerHTML = ".harvest-overlay { z-index: 1000001 !important; }";
             document.head.appendChild(style);
         }
 
@@ -63,21 +66,33 @@
                 }
 
                 // wait for work item form caption to be added
-                if (addedNodes.className === "info-text-wrapper"
-                    && addedNodes.children?.[1]?.className === "caption") {
+                if (isNewBoardHubPopup(addedNodes) || (addedNodes.className === "info-text-wrapper"
+                    && addedNodes.children?.[1]?.className === "caption")) {
                     results.push((function () {
                         var results1 = [];
                         results1.push(this.addTimerIfOnIssue());
                         return results1;
                     }).call(this));
-                    // return results;
                 }
 
                 for (let j = 0; j < mutations[i].addedNodes.length; j++) {
                     const element = mutations[i].addedNodes[j];
                     
                     // Board Tiles
-                    if (element.className?.includes("board-tile") && element.id) {
+                    if (element.className?.includes?.("board-tile") && element.id) {
+                        if (element.querySelector("." + harvestTileContainerClassName)) {
+                            continue;
+                        }
+
+                        results.push((() => {
+                            var results1 = [];
+                            results1.push(this.addTimerToTile(element));
+                            return results1;
+                        }).call(this));
+                    }
+
+                    // New board hub tile
+                    if (element.className?.includes("wit-card")) {
                         if (element.querySelector("." + harvestTileContainerClassName)) {
                             continue;
                         }
@@ -111,11 +126,14 @@
         };
 
         AzureDevOpsProfile.prototype.infect = function () {
-            injectScript("window._harvestPlatformConfig = " + (JSON.stringify(this.platformConfig())) + ";");
-            injectScript({
-                src: this.host + "/assets/platform.js",
-                async: true
-            });
+            window["._harvestPlatformConfig"] = {
+                applicationName: "Azure DevOps"
+            };
+            // injectScript("window._harvestPlatformConfig = " + (JSON.stringify(this.platformConfig())) + ";");
+            // injectScript({
+            //     src: this.host + "/assets/platform.js",
+            //     async: true
+            // });
 
             document.addEventListener("click", function(e) {
                 if (e.target?.className !== "harvest-copy-button") {
@@ -124,9 +142,11 @@
 
                 const isPlainText = e.target.hasAttribute("data-harvest-plain-text-copy");
                 const content = e.target.parentElement.parentElement;;
-                const workItemId = content.querySelector(".id")?.innerText;
+                const workItemId = content.querySelector(".id")?.innerText
+                    ?? content.parentElement.dataset["itemid"];
                 const clickableTitle = content.querySelector(".clickable-title-link");
-                const workItemName = clickableTitle?.innerText;
+                const workItemName = clickableTitle?.innerText
+                    ?? content.querySelector(".title-text")?.innerText;
 
                 const textPlain = `#${workItemId} - ${workItemName}`;
                 function copyToClipboard(str) {
@@ -144,17 +164,15 @@
                 if (isPlainText) {
                     navigator.clipboard.writeText(textPlain);
                 } else {
-                    const { href }  = clickableTitle;
+                    const { href }  = clickableTitle ?? content.querySelector("a.title");
                     copyToClipboard(`<a href="${href}">#${workItemId}</a> - ${workItemName}`);
                 }
-
-                // copyToClipboard();
 
                 e.target.innerHTML = "Copied!";
                 e.target.disabled = true;
                 e.target.style.cursor = "default";
                 setTimeout(() => {
-                    e.target.innerHTML = `<span class="bowtie-icon bowtie-${isPlainText ? "edit-copy" : "link"}" style="pointer-events: none;"></span>`;
+                    e.target.innerHTML = `<span class="fabric-icon ms-Icon--${isPlainText ? "Copy" : "Link"}" style="pointer-events: none;"></span>`;
                     e.target.disabled = false;
                     e.target.style.cursor = "pointer";
                 }, 500);
@@ -163,11 +181,28 @@
             const commits = document.querySelectorAll(".repos-commits-table tbody a.bolt-table-row");
             Array.from(commits).forEach(node => this.addTimerButtonToCommitRow(node));
 
+            chrome.runtime.onMessage.addListener((request) => {
+                if (request?.type === "work_items_loaded") {
+                    this.addTimersToWorkItemTiles();
+                }
+            });
+
+            document.addEventListener("load", () => {
+                this.addTimersToWorkItemTiles();
+            });
+
             return document.addEventListener('pjax:end', this.addTimerIfOnIssue);
         };
 
+        AzureDevOpsProfile.prototype.addTimersToWorkItemTiles = function() {
+            const workItemCards = document.querySelectorAll(".kanban-board-column .wit-card");
+            Array.from(workItemCards).forEach(node => this.addTimerToTile(node));
+            this.notifyPlatformOfNewTimers();
+        };
+
         AzureDevOpsProfile.prototype.addTimerIfOnIssue = function () {
-            var workItemNode = document.querySelector(".work-item-form");
+            var workItemNode = document.querySelector(".work-item-form")
+                ?? document.querySelector(".work-item-form-dialog");
             if (!workItemNode) {
                 return;
             }
@@ -177,7 +212,8 @@
                 return;
             }
 
-            var caption = workItemNode.querySelector("a.caption");
+            var caption = workItemNode.querySelector("a.caption")
+                ?? workItemNode.querySelector("a.bolt-link");
             if (!caption) {
                 return;
             }
@@ -194,12 +230,14 @@
          * @param {HTMLDivElement} boardTile 
          */
         AzureDevOpsProfile.prototype.addTimerToTile = function (boardTile) {
-            const content = boardTile?.querySelector(".board-tile-content");
-            if (!content) {
-                return;
-            }
+            const {
+                content,
+                harvestContainerAlreadyAdded,
+                isNewBoardHub,
+                isValid,
+            } = this.getBoardTileData(boardTile);
 
-            if (content.querySelector("." + harvestTileContainerClassName)) {
+            if (!isValid || harvestContainerAlreadyAdded) {
                 return;
             }
 
@@ -218,7 +256,7 @@
                 copyButton.style.marginRight = "5px";
 
                 const icon = document.createElement("span");
-                icon.className = `bowtie-icon bowtie-${isPlainText ? "edit-copy" : "link"}`;
+                icon.className = `fabric-icon ms-Icon--${isPlainText ? "Copy" : "Link"}`;
                 icon.style.pointerEvents = "none"; // This prevents the icon from being the target of the click event
                 copyButton.appendChild(icon);
 
@@ -226,7 +264,11 @@
             }
 
             harvestTileContainer.className = harvestTileContainerClassName;
-            harvestTileContainer.style.padding = "5px";
+            if (isNewBoardHub) {
+                harvestTileContainer.style.margin = "2px -5px -5px";
+            } else {
+                harvestTileContainer.style.padding = "5px";
+            }
             harvestTileContainer.style.textAlign = "right";
             // harvestTileContainer.style.backgroundColor = "#f36c00";
 
@@ -242,7 +284,7 @@
             timerButton.style.height = "28px";
             timerButton.style.width = "auto";
             timerButton.className = "harvest-timer";
-            timerButton.innerHTML = '<span class="fabric-icon ms-Icon--Clock"></span>';
+            timerButton.innerHTML = '<span class="fabric-icon ms-Icon--Stopwatch"></span>';
             timerButton.addEventListener("click", (e) => {
                 this.setHarvestButtonData(boardTile, timerButton);
             });
@@ -261,18 +303,16 @@
          * @param {HTMLButtonElement} timerButton 
          */
         AzureDevOpsProfile.prototype.setHarvestButtonData = function (boardTile, timerButton) {
-            const workItemId = boardTile.querySelector(".id")?.innerText;
-            if (!workItemId) {
+            const { href, isValid, workItemId, workItemName } = this.getBoardTileData(boardTile);
+            if (!isValid) {
                 return;
             }
 
-            const clickableTitle = boardTile.querySelector(".clickable-title-link");
-            const workItemName = clickableTitle?.innerText;
             timerButton.setAttribute("data-item", JSON.stringify({
                 id: workItemId,
                 name: `#${workItemId}: ${workItemName}`
             }));
-            timerButton.setAttribute("data-permalink", boardTile.querySelector(".clickable-title-link")?.href);
+            timerButton.setAttribute("data-permalink", href);
 
             var group = decodeURIComponent(location.pathname.split('/')[1]);
             timerButton.setAttribute("data-group", JSON.stringify({
@@ -289,7 +329,8 @@
             var el, i, len, permalink, ref;
             addMetaData(this.headerButton, data);
             account = data.account, group = data.group, item = data.item;
-            var caption = document.querySelector("a.caption");
+            var caption = document.querySelector("a.caption")
+                ?? document.querySelector(".work-item-form-page a.bolt-link");
             var permalink = caption.href;
             this.headerButton.removeAttribute('data-listening');
             this.headerButton.setAttribute('data-permalink', permalink);
@@ -386,10 +427,63 @@
             spacerCell?.appendChild(commitButton);
         };
 
+        /**
+         * @param {HTMLDivElement} boardTile 
+         */
+        AzureDevOpsProfile.prototype.getBoardTileData = function (boardTile) {
+            let isNewBoardHub = false;
+            let content = boardTile?.querySelector(".board-tile-content");
+            if (!content) {
+                content = boardTile?.querySelector(".card-content");
+
+                isNewBoardHub = true;
+            }
+
+            if (!content) {
+                return { isValid: false };
+            }
+
+            const workItemId = content.querySelector(".id")?.innerText
+                ?? content.parentElement.dataset["itemid"];
+            const clickableTitle = content.querySelector(".clickable-title-link");
+            const workItemName = clickableTitle?.innerText
+                ?? content.querySelector(".title-text")?.innerText;
+            const { href }  = clickableTitle ?? content.querySelector("a.title");
+            const harvestContainerAlreadyAdded = !!boardTile.querySelector(`.${harvestTileContainerClassName}`);
+
+            return {
+                content,
+                harvestContainerAlreadyAdded,
+                href,
+                isNewBoardHub,
+                isValid: true,
+                workItemId,
+                workItemName
+            };
+        };
+
         return AzureDevOpsProfile;
     })();
 
     (chrome ?? browser).runtime.sendMessage({ type: "getHost" }, function (host) {
         return new AzureDevOpsProfile(host);
     });
+
+    /**
+     * @param {HTMLElement} node 
+     */
+    function isNewBoardHubPopup(node) {
+        if (node.classList?.contains("file-drop-zone-container") && !!node.querySelector(".work-item-form-page")) {
+            return true;
+        }
+
+        return node.classList?.contains("work-item-form-page") ?? false;
+    }
+
+    /**
+     * @param {HTMLElement} node 
+     */
+    function getWorkItemData(node) {
+
+    }
 }).call(this);
