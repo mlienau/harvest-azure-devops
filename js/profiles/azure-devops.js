@@ -3,6 +3,17 @@
         bind = function (fn, me) { return function () { return fn.apply(me, arguments); }; };
     const harvestTileContainerClassName = "tile-harvest-container";
 
+    /**
+     * @callback sendMessageCallback
+     * @param {*} payload
+     * 
+     * @param {string} type
+     * @param {sendMessageCallback} callback
+     */
+    function sendMessage(type, callback) {
+        (chrome ?? browser).runtime.sendMessage({ type }, callback);
+    }
+
     injectScript = function (opts) {
         var name, ph, script, value;
         script = document.createElement("script");
@@ -35,6 +46,10 @@
             style.setAttribute("type", "text/css");
             style.innerHTML = ".harvest-overlay { z-index: 1000001 !important; }";
             document.head.appendChild(style);
+
+            setInterval(() => {
+                this.addTimersToWorkItemTiles();
+            }, 10000)
         }
 
         AzureDevOpsProfile.prototype.platformConfig = function () {
@@ -126,12 +141,16 @@
         };
 
         AzureDevOpsProfile.prototype.infect = function () {
-            window["._harvestPlatformConfig"] = {
+            window._harvestPlatformConfig = {
                 applicationName: "Azure DevOps"
             };
+            // window["_harvestPlatformConfig"] = {
+            //     applicationName: "Azure DevOps"
+            // };
             // injectScript("window._harvestPlatformConfig = " + (JSON.stringify(this.platformConfig())) + ";");
+            // console.log("script src", "https://platform.harvestapp.com/assets/platform.js");
             // injectScript({
-            //     src: this.host + "/assets/platform.js",
+            //     src: "https://platform.harvestapp.com/assets/platform.js",
             //     async: true
             // });
 
@@ -181,21 +200,21 @@
             const commits = document.querySelectorAll(".repos-commits-table tbody a.bolt-table-row");
             Array.from(commits).forEach(node => this.addTimerButtonToCommitRow(node));
 
-            chrome.runtime.onMessage.addListener((request) => {
+            (chrome ?? browser).runtime.onMessage.addListener((request) => {
                 if (request?.type === "work_items_loaded") {
                     this.addTimersToWorkItemTiles();
                 }
             });
 
-            document.addEventListener("load", () => {
-                this.addTimersToWorkItemTiles();
-            });
+            document.addEventListener("load", () => this.addTimersToWorkItemTiles());
+            window.addEventListener("online", () => sendMessage("window:online"));
+            window.addEventListener("offline", () => sendMessage("window:offline"));
 
             return document.addEventListener('pjax:end', this.addTimerIfOnIssue);
         };
 
         AzureDevOpsProfile.prototype.addTimersToWorkItemTiles = function() {
-            const workItemCards = document.querySelectorAll(".kanban-board-column .wit-card");
+            const workItemCards = document.querySelectorAll(":is(.kanban-board-column .wit-card, .member-content .board-tile)");
             Array.from(workItemCards).forEach(node => this.addTimerToTile(node));
             this.notifyPlatformOfNewTimers();
         };
@@ -465,9 +484,10 @@
         return AzureDevOpsProfile;
     })();
 
-    (chrome ?? browser).runtime.sendMessage({ type: "getHost" }, function (host) {
-        return new AzureDevOpsProfile(host);
-    });
+    // (chrome ?? browser).runtime.sendMessage({ type: "getHost" }, function (host) {
+    //     return new AzureDevOpsProfile(host);
+    // });
+    sendMessage("getHost", (host) => new AzureDevOpsProfile(host));
 
     /**
      * @param {HTMLElement} node 

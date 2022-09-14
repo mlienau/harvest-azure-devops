@@ -1,24 +1,15 @@
-// chrome.runtime.onMessage.addListener(function(message, sender) {
-// 	console.log('hello');
-// })
-
 import PlatformCookie from "./js/background/cookie.js";
-// importScripts("./js/background/cookie.js", )
 
 (function() {
   var PlatformExtension,
     bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
-//   PlatformCookie = this.PlatformCookie;
-
   PlatformExtension = (function() {
-    PlatformExtension.prototype.host = "dev.azure.com" // window.host;
+    PlatformExtension.prototype.host = "platform.harvestapp.com"; // "dev.azure.com" // window.host;
 
     PlatformExtension.prototype.version = (chrome ?? browser).runtime.getManifest().version;
 
     PlatformExtension.prototype.pollLength = 20;
-
-    PlatformExtension.prototype.splashUrl = 'https://www.getharvest.com/harvest-for-chrome-installed';
 
     function PlatformExtension() {
       this.installed = bind(this.installed, this);
@@ -26,28 +17,17 @@ import PlatformCookie from "./js/background/cookie.js";
       this.getTimerStatus = bind(this.getTimerStatus, this);
       this.handleHeaders = bind(this.handleHeaders, this);
       this.handleMessage = bind(this.handleMessage, this);
-      chrome.tabs.query({active: true, currentWindow: true}, ([tab]) => {
-        chrome.scripting.executeScript({
-            target: { tabId: tab.id },
-            func: () => {
-                window.addEventListener("online", this.getTimerStatus);
-                window.addEventListener("offline", this.stopPolling);
-                document.addEventListener("login:change", this.getTimerStatus);
-            }
-        }); 
-      });
-    //   const window = chrome.windows.getCurrent();
       this.cookie = new PlatformCookie();
+
       (chrome ?? browser).runtime.onMessage.addListener(this.handleMessage);
       (chrome ?? browser).runtime.onInstalled.addListener(this.installed);
-      (chrome ?? browser).webRequest.onHeadersReceived.addListener(this.handleHeaders, {
-        urls: ['https://github.com/*'],
-        types: ['main_frame']
-      }, ['blocking', 'responseHeaders']);
       (chrome ?? browser).webRequest.onCompleted.addListener(() => {
-        chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+        const url = "https://dev.azure.com/*/_boards/*";
+        (chrome ?? browser).tabs.query({ url }, (tabs) => {
             setTimeout(() => {
-                chrome.tabs.sendMessage(tabs[0].id, { type: "work_items_loaded" });
+                for (const tab of tabs) {
+                    (chrome ?? browser).tabs.sendMessage(tab.id, { type: "work_items_loaded" });
+                }
             },50);
         });
       }, {
@@ -58,10 +38,9 @@ import PlatformCookie from "./js/background/cookie.js";
       })
     }
 
-    PlatformExtension.prototype.handleMessage = function(message, sender, respond) {
+    PlatformExtension.prototype.handleMessage = function(message, _sender, respond) {
       switch (message != null ? message.type : void 0) {
         case 'getHost':
-            console.log("host", this.host);
           return respond(this.host);
         case 'getHostIfEnabled':
           if (message != null ? message.featureFlag : void 0) {
@@ -84,19 +63,13 @@ import PlatformCookie from "./js/background/cookie.js";
           return this.setRunningTimerIcon(true);
         case 'timer:stopped':
           return this.setRunningTimerIcon(false);
+        case 'window:online':
+          return this.getTimerStatus();
+        case 'window:offline':
+          return this.stopPolling();
+        case 'login:change':
+          return this.getTimerStatus();
       }
-    };
-
-    PlatformExtension.prototype.handleHeaders = function(arg) {
-      var header, i, len, responseHeaders;
-      responseHeaders = arg.responseHeaders;
-      for (i = 0, len = responseHeaders.length; i < len; i++) {
-        header = responseHeaders[i];
-        this.handleHeader(header);
-      }
-      return {
-        responseHeaders: responseHeaders
-      };
     };
 
     PlatformExtension.prototype.handleHeader = function(header) {
@@ -153,29 +126,26 @@ import PlatformCookie from "./js/background/cookie.js";
     };
 
     PlatformExtension.prototype.setRunningTimerIcon = function(running) {
-      // var state;
-      // state = running ? "on" : "off";
-      // chrome.browserAction.setIcon({
-      //   path: {
-      //     "19": "images/h-toolbar-" + state + "@19px.png",
-      //     "38": "images/h-toolbar-" + state + "@38px.png"
-      //   }
-      // });
-      // return chrome.browserAction.setTitle({
-      //   title: running ? "View the running Harvest timer" : "Start a Harvest timer"
-      // });
+      const state = running ? "on" : "off";
+      (chrome ?? browser).action.setIcon({
+        path: {
+          "19": "images/h-toolbar-" + state + "@19px.png",
+          "38": "images/h-toolbar-" + state + "@38px.png"
+        }
+      });
+      return (chrome ?? browser).action.setTitle({
+        title: running ? "View the running Harvest timer" : "Start a Harvest timer"
+      });
     };
 
     PlatformExtension.prototype.installed = function(arg) {
-      var previousVersion, reason;
-      reason = arg.reason, previousVersion = arg.previousVersion;
-      switch (reason) {
+      switch (arg.reason) {
         case 'install':
           return (chrome ?? browser).tabs.create({
-            url: this.splashUrl + "?version=" + this.version
+            url: `https://www.getharvest.com/harvest-for-chrome-installed?version=${this.version}`
           });
         case 'update':
-          return console.log("Upgrade notice: " + previousVersion + " upgraded to " + this.version);
+          return console.log(`Upgrade notice: ${arg.previousVersion} upgraded to ${this.version}`);
       }
     };
 
@@ -184,5 +154,20 @@ import PlatformCookie from "./js/background/cookie.js";
   })();
 
   new PlatformExtension();
+//   chrome.contextMenus.create({
+//       id: 'foo',
+//       title: 'first',
+//       contexts: ['action']
+//     })
+    
+//     function contextClick(info, tab) {
+//       const { menuItemId } = info
+    
+//       if (menuItemId === 'foo') {
+//         // do something
+//       }
+//     }
+    
+//     chrome.contextMenus.onClicked.addListener(contextClick)
 
 }).call(this);

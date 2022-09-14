@@ -7,7 +7,8 @@
         {
             "js": [
                 "js/forwarding.js",
-                "js/profiles/azure-devops.js"
+                "js/profiles/azure-devops.js",
+                "js/platform.js"
             ],
             "matches": [
                 "https://*.visualstudio.com/*",
@@ -16,7 +17,7 @@
         }
     ],
     "content_security_policy": {
-        "extension_page": "script-src 'self' https://*.harvestapp.com https://*.harvestapp.dev; object-src 'self'"
+        "extension_page": "script-src 'self' https://*.harvestapp.com https://*.harvestapp.dev; object-src 'self'; script-src 'element' https://*.harvestapp.com https://*.harvestapp.dev;"
     },
     "description": "Track time from Chrome for Azure DevOps projects.",
     "icons": {
@@ -30,7 +31,7 @@
         "cookies",
         "webRequest",
         "activeTab",
-        "scripting"
+        "contextMenus"
     ],
     "host_permissions": [
         "https://*.visualstudio.com/*",
