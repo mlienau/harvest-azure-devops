@@ -3,9 +3,10 @@ export default class PlatformCookie {
     lastCookie = null;
     cookie_name = 'platform_user_id';
 
-    constructor() {
+    constructor(callback) {
         (chrome ?? browser).cookies.onChanged.addListener(this.parseCookieChange);
         this.getCookie();
+        this.callback = callback;
     }
 
     domain = () => {
@@ -43,6 +44,7 @@ export default class PlatformCookie {
     };
 
     updatedCookie = () => {
+        this.callback();
         // return document.dispatchEvent(new CustomEvent("login:change"));
     };
 }

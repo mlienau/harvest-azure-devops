@@ -1,5 +1,5 @@
 (function () {
-    var AzureDevOpsProfile, injectScript,
+    var AzureDevOpsProfile,
         bind = function (fn, me) { return function () { return fn.apply(me, arguments); }; };
     const harvestTileContainerClassName = "tile-harvest-container";
 
@@ -13,25 +13,6 @@
     function sendMessage(type, callback) {
         (chrome ?? browser).runtime.sendMessage({ type }, callback);
     }
-
-    injectScript = function (opts) {
-        var name, ph, script, value;
-        script = document.createElement("script");
-        switch (typeof opts) {
-            case "object":
-                for (name in opts) {
-                    value = opts[name];
-                    script[name] = value;
-                }
-
-                script.src = opts.src;
-                break;
-            case "string":
-                script.textContent = opts;
-        }
-        ph = document.getElementsByTagName("script")[0];
-        return ph.parentNode.insertBefore(script, ph);
-    };
 
     AzureDevOpsProfile = (function () {
         function AzureDevOpsProfile(host1) {
@@ -92,7 +73,7 @@
 
                 for (let j = 0; j < mutations[i].addedNodes.length; j++) {
                     const element = mutations[i].addedNodes[j];
-                    
+
                     // Board Tiles
                     if (element.className?.includes?.("board-tile") && element.id) {
                         if (element.querySelector("." + harvestTileContainerClassName)) {
@@ -144,17 +125,8 @@
             window._harvestPlatformConfig = {
                 applicationName: "Azure DevOps"
             };
-            // window["_harvestPlatformConfig"] = {
-            //     applicationName: "Azure DevOps"
-            // };
-            // injectScript("window._harvestPlatformConfig = " + (JSON.stringify(this.platformConfig())) + ";");
-            // console.log("script src", "https://platform.harvestapp.com/assets/platform.js");
-            // injectScript({
-            //     src: "https://platform.harvestapp.com/assets/platform.js",
-            //     async: true
-            // });
 
-            document.addEventListener("click", function(e) {
+            document.addEventListener("click", function (e) {
                 if (e.target?.className !== "harvest-copy-button") {
                     return;
                 }
@@ -183,7 +155,7 @@
                 if (isPlainText) {
                     navigator.clipboard.writeText(textPlain);
                 } else {
-                    const { href }  = clickableTitle ?? content.querySelector("a.title");
+                    const { href } = clickableTitle ?? content.querySelector("a.title");
                     copyToClipboard(`<a href="${href}">#${workItemId}</a> - ${workItemName}`);
                 }
 
@@ -213,7 +185,7 @@
             return document.addEventListener('pjax:end', this.addTimerIfOnIssue);
         };
 
-        AzureDevOpsProfile.prototype.addTimersToWorkItemTiles = function() {
+        AzureDevOpsProfile.prototype.addTimersToWorkItemTiles = function () {
             const workItemCards = document.querySelectorAll(":is(.kanban-board-column .wit-card, .member-content .board-tile)");
             Array.from(workItemCards).forEach(node => this.addTimerToTile(node));
             this.notifyPlatformOfNewTimers();
@@ -225,7 +197,7 @@
             if (!workItemNode) {
                 return;
             }
-            
+
             const buttonAlreadyExists = !!workItemNode.querySelector(".harvest-timer");
             if (buttonAlreadyExists) {
                 return;
@@ -307,7 +279,7 @@
             timerButton.addEventListener("click", (e) => {
                 this.setHarvestButtonData(boardTile, timerButton);
             });
-            
+
             timerButton.setAttribute("data-skip-styling", "true");
 
             this.setHarvestButtonData(content, timerButton);
@@ -427,7 +399,7 @@
             const commitText = row.querySelector(".commit-title").innerText ?? "";
             const itemData = { name: commitText };
             if (typeof commitText === "string") {
-                const workItemMatch =  commitText.match(/#\d+/);
+                const workItemMatch = commitText.match(/#\d+/);
                 if (workItemMatch?.length > 0) {
                     const workItemId = workItemMatch[0].substring(1);
                     itemData["id"] = workItemId
@@ -439,7 +411,7 @@
 
             addMetaData(commitButton, itemData);
 
-            commitButton.addEventListener("click", function(e) {
+            commitButton.addEventListener("click", function (e) {
                 e.preventDefault();
             });
 
@@ -467,13 +439,17 @@
             const clickableTitle = content.querySelector(".clickable-title-link");
             const workItemName = clickableTitle?.innerText
                 ?? content.querySelector(".title-text")?.innerText;
-            const { href }  = clickableTitle ?? content.querySelector("a.title");
+            const link = clickableTitle ?? content.querySelector("a.title");
+            if (!link) {
+                return { isValid: false };
+            }
+
             const harvestContainerAlreadyAdded = !!boardTile.querySelector(`.${harvestTileContainerClassName}`);
 
             return {
                 content,
                 harvestContainerAlreadyAdded,
-                href,
+                href: link.href,
                 isNewBoardHub,
                 isValid: true,
                 workItemId,
@@ -484,9 +460,6 @@
         return AzureDevOpsProfile;
     })();
 
-    // (chrome ?? browser).runtime.sendMessage({ type: "getHost" }, function (host) {
-    //     return new AzureDevOpsProfile(host);
-    // });
     sendMessage("getHost", (host) => new AzureDevOpsProfile(host));
 
     /**
@@ -498,12 +471,5 @@
         }
 
         return node.classList?.contains("work-item-form-page") ?? false;
-    }
-
-    /**
-     * @param {HTMLElement} node 
-     */
-    function getWorkItemData(node) {
-
     }
 }).call(this);

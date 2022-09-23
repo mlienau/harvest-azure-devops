@@ -30,12 +30,12 @@
     "permissions": [
         "cookies",
         "webRequest",
-        "activeTab",
         "contextMenus"
     ],
     "host_permissions": [
         "https://*.visualstudio.com/*",
-        "https://dev.azure.com/*"
+        "https://dev.azure.com/*",
+        "https://platform.harvestapp.com/*"
     ],
     "version": "1.2",
     "web_accessible_resources": [{
