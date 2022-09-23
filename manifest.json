@@ -34,7 +34,7 @@
       "webRequest",
       "webRequestBlocking"
    ],
-   "version": "1.2",
+   "version": "1.3",
    "web_accessible_resources": [
       "images/trello-timer-icon.png"
    ],
