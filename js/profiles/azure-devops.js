@@ -210,7 +210,8 @@
 
         AzureDevOpsProfile.prototype.addTimerIfOnIssue = function () {
             var workItemNode = document.querySelector(".work-item-form")
-                ?? document.querySelector(".work-item-form-dialog");
+                ?? document.querySelector(".work-item-form-dialog")
+                ?? document.querySelector(".work-item-form-page");
             if (!workItemNode) {
                 return;
             }
@@ -228,9 +229,14 @@
 
             var parts = caption.href.split("/");
             var itemId = parts[parts.length - 1];
+            const isNewBoardHub = workItemNode.classList.contains("work-item-form-dialog")
+                || workItemNode.classList.contains("work-item-form-page");
+            const inputSelector = isNewBoardHub
+                ? ".work-item-title-textfield input"
+                : "input[type='text']";
             return this.addTimer({
                 id: itemId,
-                name: `#${itemId}: ${workItemNode.querySelector("input[type='text']")?.value}`
+                name: `#${itemId}: ${workItemNode.querySelector(inputSelector)?.value}`
             });
         };
 
@@ -368,7 +374,7 @@
         AzureDevOpsProfile.prototype.createButton = function () {
             var button = document.createElement("button");
             button.type = "button";
-            button.style = "background: #f36c00; border: none; color: #ffffff; cursor: pointer;";
+            button.style = "background: #f36c00; border: none; color: #ffffff; cursor: pointer; margin-left: .5rem; padding: .25rem .4rem; display: flex; align-items: center; gap: .25rem; border-radius: .25rem;";
             button.type = "button";
             button.classList.add('harvest-timer', 'btn', 'big-harvest-button');
             button.setAttribute("data-skip-styling", "true");
